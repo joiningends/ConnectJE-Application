@@ -1,0 +1,30 @@
+[
+  {
+    "id": "5189b956-c4cd-49fb-97ab-f75eb832faf1",
+    "type": "text",
+    "data": {
+      "instance_id": "66F40ABBA8127",
+      "sender": "Emp 1-919831301276",
+      "sectionId": "6738a29535e6245ddb00004b",
+      "message": "Test",
+      "minIntervalMs": 30000,
+      "maxIntervalMs": 40000,
+      "campainid": "675d520913d9410964c4e909"
+    },
+    "scheduleTime": 1734172200000
+  },
+  {
+    "id": "d27e3e19-43a1-4d70-a1c9-bb2255690ff1",
+    "type": "text",
+    "data": {
+      "instance_id": "66F40ABBA8127",
+      "sender": "Emp 1-919831301276",
+      "sectionId": "6738a29535e6245ddb00004b",
+      "message": "Test",
+      "minIntervalMs": 30000,
+      "maxIntervalMs": 40000,
+      "campainid": "675d6039895031efae291b8e"
+    },
+    "scheduleTime": 1734172680000
+  }
+]
