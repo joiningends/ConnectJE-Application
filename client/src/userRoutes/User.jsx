@@ -46,6 +46,7 @@ import SendWhatsAppMessage from "../components/admin/newChanges/SendWhatsAppMess
 import EmailProfile from "../components/admin/newChanges/EmailProfile.jsx";
 import EmailProfiles from "../components/admin/newChanges/EmailProfiles.jsx";
 import EditEventAdmin from "../components/admin/newChanges/EditEventAdmin.jsx";
+import RegisteredClients from "../components/admin/newChanges/RegisterdClinets.jsx";
 
 const User = () => {
   return (
@@ -71,6 +72,7 @@ const User = () => {
         <Route path="/sendGroupMessage" element={<WhatsappGroupMessage />} />
         <Route path="/Event" element={<Event />} />
         <Route path="/Events" element={<EventAdminUser />} />
+        <Route path="/registeredUsers/:id" element={<RegisteredClients />} />
         <Route path="/Events/Edit/:eventId" element={<EditEventAdmin />} />
         <Route path="/ReportUser" element={<ReportUser />} />
         <Route path="/e-Invoice" element={<EInvoice />} />

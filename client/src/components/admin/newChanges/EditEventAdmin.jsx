@@ -108,10 +108,12 @@ const EditEventAdmin = () => {
       setInstrumentsToBeCarried(eventData.Instrumenttobecarried || []);
       setSelectedImages(
         eventData.images && Array.isArray(eventData.images)
-          ? eventData.images.map(image => ({
-              value: image,
-              label: image.split("/").pop(),
-            })).filter(img => img.value && img.label)
+          ? eventData.images
+              .map(image => ({
+                value: image,
+                label: image.split("/").pop(),
+              }))
+              .filter(img => img.value && img.label)
           : []
       );
 
@@ -172,18 +174,17 @@ const EditEventAdmin = () => {
         if (partnerImageName) {
           setSelectedPartnerImage({
             value: eventData.patnerlog,
-            label: partnerImageName
+            label: partnerImageName,
           });
         }
       }
-
 
       if (eventData.eventownerlogo) {
         const adminImageName = eventData.eventownerlogo.split("/").pop();
         if (adminImageName) {
           setSelectedAdminImage({
             value: eventData.eventownerlogo,
-            label: adminImageName
+            label: adminImageName,
           });
         }
       }
@@ -661,45 +662,19 @@ const EditEventAdmin = () => {
 
         {/* Images */}
         <div className="mb-4">
-        <label className="block text-gray-700 text-sm font-bold mb-2">
-          Select Images
-        </label>
-        <Select
-          isMulti
-          name="images"
-          value={selectedImages}
-          onChange={handleImageChange}
-          options={images.map(image => ({
-            value: image.path,
-            label: image.filename,
-          }))}
-          className="basic-multi-select"
-          classNamePrefix="select"
-          isClearable={true}
-          styles={{
-            control: base => ({
-              ...base,
-              borderColor: "#B197FC",
-            }),
-          }}
-        />
-      </div>
-
-      {/* Image for Partner */}
-      {eventType === "New Type" && (
-        <div className="mb-4">
           <label className="block text-gray-700 text-sm font-bold mb-2">
-            Image for Partner
+            Select Images
           </label>
           <Select
-            name="imageForPartner"
-            value={selectedPartnerImage}
-            onChange={option => setSelectedPartnerImage(option)}
+            isMulti
+            name="images"
+            value={selectedImages}
+            onChange={handleImageChange}
             options={images.map(image => ({
               value: image.path,
               label: image.filename,
             }))}
-            className="basic-single"
+            className="basic-multi-select"
             classNamePrefix="select"
             isClearable={true}
             styles={{
@@ -710,34 +685,60 @@ const EditEventAdmin = () => {
             }}
           />
         </div>
-      )}
 
-      {/* Image for Admin */}
-      {eventType === "New Type" && (
-        <div className="mb-4">
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            Image for Admin
-          </label>
-          <Select
-            name="imageForAdmin"
-            value={selectedAdminImage}
-            onChange={option => setSelectedAdminImage(option)}
-            options={images.map(image => ({
-              value: image.path,
-              label: image.filename,
-            }))}
-            className="basic-single"
-            classNamePrefix="select"
-            isClearable={true}
-            styles={{
-              control: base => ({
-                ...base,
-                borderColor: "#B197FC",
-              }),
-            }}
-          />
-        </div>
-      )}
+        {/* Image for Partner */}
+        {eventType === "New Type" && (
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Image for Partner
+            </label>
+            <Select
+              name="imageForPartner"
+              value={selectedPartnerImage}
+              onChange={option => setSelectedPartnerImage(option)}
+              options={images.map(image => ({
+                value: image.path,
+                label: image.filename,
+              }))}
+              className="basic-single"
+              classNamePrefix="select"
+              isClearable={true}
+              styles={{
+                control: base => ({
+                  ...base,
+                  borderColor: "#B197FC",
+                }),
+              }}
+            />
+          </div>
+        )}
+
+        {/* Image for Admin */}
+        {eventType === "New Type" && (
+          <div className="mb-4">
+            <label className="block text-gray-700 text-sm font-bold mb-2">
+              Image for Admin
+            </label>
+            <Select
+              name="imageForAdmin"
+              value={selectedAdminImage}
+              onChange={option => setSelectedAdminImage(option)}
+              options={images.map(image => ({
+                value: image.path,
+                label: image.filename,
+              }))}
+              className="basic-single"
+              classNamePrefix="select"
+              isClearable={true}
+              styles={{
+                control: base => ({
+                  ...base,
+                  borderColor: "#B197FC",
+                }),
+              }}
+            />
+          </div>
+        )}
 
         {/* Number of Counters */}
         {eventType !== "Simple Event" && (

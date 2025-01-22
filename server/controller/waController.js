@@ -931,7 +931,10 @@ exports.sendBulkWhatsAppMessagesMedia = async (req, res) => {
 
 exports.sendTextMessageToGroup = async (req, res) => {
   const access_token = "64da53e6c44e5";
+<<<<<<< HEAD
   // ----------------------------------------------------------------------------------------
+=======
+>>>>>>> e79cd56099d4dc6ba2696ac0db143b60bfdd0776
   const hisocialWhatsAppGroupEndpoint = "https://hisocial.in/api/send_group";
   const trackingServiceUrl =
     "http://localhost:5001/api/v1/groups/track-message/excel";

@@ -48,7 +48,7 @@ function WhatsappGroupMessage() {
     const fetchContactGroups = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5001/api/v1/wgroup/active/${userType}`
+          `https://connectje.in/api/v1/wgroup/active/${userType}`
         );
         if (Array.isArray(response.data)) {
           setContactGroups(response.data);
@@ -64,7 +64,7 @@ function WhatsappGroupMessage() {
     const fetchProfiles = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5001/api/v1/profiles/client/${userType}`
+          `https://connectje.in/api/v1/profiles/client/${userType}`
         );
         if (Array.isArray(response.data)) {
           setProfiles(response.data);
@@ -79,7 +79,7 @@ function WhatsappGroupMessage() {
     const fetchAttachments = async () => {
       try {
         const response = await axios.get(
-          `http://localhost:5001/api/v1/storage/${userType}`
+          `https://connectje.in/api/v1/storage/${userType}`
         );
         if (Array.isArray(response.data)) {
           setAttachmentsList(response.data);
@@ -140,8 +140,8 @@ function WhatsappGroupMessage() {
       };
 
       console.log(payload);
-      console.log(`http://localhost:5001/api/v1/wa/group/${userType}`);
-      axios.post(`http://localhost:5001/api/v1/wa/group/${userType}`, payload);
+      console.log(`https://connectje.in/api/v1/wa/group/${userType}`);
+      axios.post(`https://connectje.in/api/v1/wa/group/${userType}`, payload);
       toast.success("Your request has been successfully submitted!");
       setTimeout(() => {
         navigate("/groupMessage");
@@ -181,9 +181,9 @@ function WhatsappGroupMessage() {
       scheduleTime: timeAns,
     };
     console.log(payload);
-    console.log(`http://localhost:5001/api/v1/wa/groups/${userType}`);
+    console.log(`https://connectje.in/api/v1/wa/groups/${userType}`);
     try {
-      axios.post(`http://localhost:5001/api/v1/wa/groups/${userType}`, payload);
+      axios.post(`https://connectje.in/api/v1/wa/groups/${userType}`, payload);
       toast.success("Your request has been successfully submitted!");
       setTimeout(() => {
         navigate("/groupMessage");

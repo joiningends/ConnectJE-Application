@@ -4,6 +4,8 @@ import { toast, ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
 import axios from "../../../axiosSetup";
 import * as XLSX from "xlsx";
+import { Edit, Eye, FileSpreadsheet, Loader, AlertCircle } from "lucide-react";
+import { ClipLoader } from "react-spinners";
 
 export default function EventAdminUser() {
   const [events, setEvents] = useState([]);
@@ -11,15 +13,9 @@ export default function EventAdminUser() {
   const [searchTerm, setSearchTerm] = useState("");
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
-  const [showPopup, setShowPopup] = useState(false);
-  const [selectedEventId, setSelectedEventId] = useState(null);
-  const [participants, setParticipants] = useState([]);
-  const [loadingParticipants, setLoadingParticipants] = useState(false);
-  const [participantSearchTerm, setParticipantSearchTerm] = useState("");
-  const [participantPage, setParticipantPage] = useState(1);
-  const [editingParticipant, setEditingParticipant] = useState(null);
-  const eventsPerPage = 10;
-  const participantsPerPage = 5;
+  const [activeTab, setActiveTab] = useState("ongoing");
+  const [categorizedEvents, setCategorizedEvents] = useState({});
+  const [eventsPerPage, setEventsPerPage] = useState(10);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -30,13 +26,12 @@ export default function EventAdminUser() {
           `http://localhost:5001/api/v1/eventmodel/all/${userId}`
         );
 
-        if (!Array.isArray(response.data)) {
+        if (Array.isArray(response.data)) {
+          setEvents(response.data);
+          setFilteredEvents(response.data);
+        } else {
           throw new Error("Data is not an array");
         }
-
-        console.log(response.data);
-        setEvents(response.data);
-        setFilteredEvents(response.data);
       } catch (error) {
         console.error("Error fetching events:", error);
         toast.error("Failed to fetch events. Please try again.");
@@ -50,91 +45,83 @@ export default function EventAdminUser() {
 
   useEffect(() => {
     if (Array.isArray(events)) {
+      setLoading(true);
       const filtered = events.filter(
         event =>
           event.eventName.toLowerCase().includes(searchTerm.toLowerCase()) ||
           event.PlaceofEvent.toLowerCase().includes(searchTerm.toLowerCase())
       );
+
+      // Sort events by start date
+      filtered.sort((a, b) => parseDate(a.eventDate) - parseDate(b.eventDate));
+
       setFilteredEvents(filtered);
+      setCategorizedEvents(categorizeEvents(filtered));
       setCurrentPage(1);
+      setLoading(false);
     }
   }, [searchTerm, events]);
 
   const formatDate = dateString => {
-    const date = new Date(dateString);
-    return date
-      .toLocaleDateString("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-      })
-      .replace(/\//g, "-");
+    const [day, month, year] = dateString.split("-");
+    return `${day}-${month}-${year}`;
   };
 
-  const formatTimeSlot = dateString => {
-    if (!dateString) return "N/A";
-    const [datePart, timePart] = dateString.split(" ");
-    const [day, month, year] = datePart.split("-");
-    return `${day}-${month}-${year} ${timePart}`;
+  const categorizeEvents = events => {
+    const now = new Date();
+    return events.reduce(
+      (acc, event) => {
+        const startDate = parseDate(event.eventDate);
+        const endDate = parseDate(event.endDate);
+        const endTime = parseTime(event.endTime);
+
+        // Set the end time on the end date
+        endDate.setHours(endTime.getHours(), endTime.getMinutes());
+
+        if (event.status !== "approved") {
+          acc.unapproved.push(event);
+        } else if (now >= startDate && now <= endDate) {
+          acc.ongoing.push(event);
+        } else if (now > endDate) {
+          acc.completed.push(event);
+        } else if (startDate > now) {
+          acc.upcoming.push(event);
+        }
+
+        return acc;
+      },
+      { ongoing: [], completed: [], unapproved: [], upcoming: [] }
+    );
+  };
+
+  // Helper function to parse date in DD-MM-YYYY format
+  const parseDate = dateString => {
+    const [day, month, year] = dateString.split("-").map(Number);
+    return new Date(year, month - 1, day);
+  };
+
+  // Helper function to parse time in HH:mm format (24-hour)
+  const parseTime = timeString => {
+    const [hours, minutes] = timeString.split(":").map(Number);
+    const date = new Date();
+    date.setHours(hours, minutes, 0, 0);
+    return date;
   };
 
   const indexOfLastEvent = currentPage * eventsPerPage;
   const indexOfFirstEvent = indexOfLastEvent - eventsPerPage;
-  const currentEvents = filteredEvents.slice(
-    indexOfFirstEvent,
-    indexOfLastEvent
+  const currentEvents =
+    categorizedEvents[activeTab]?.slice(indexOfFirstEvent, indexOfLastEvent) ||
+    [];
+  const totalPages = Math.ceil(
+    (categorizedEvents[activeTab]?.length || 0) / eventsPerPage
   );
-  const totalPages = Math.ceil(filteredEvents.length / eventsPerPage);
 
   const paginate = pageNumber => setCurrentPage(pageNumber);
 
-  const handleViewParticipants = async eventId => {
-    setSelectedEventId(eventId);
-    setLoadingParticipants(true);
-    setShowPopup(true);
-
-    try {
-      const response = await axios.get(
-        `http://localhost:5001/api/v1/register/${eventId}/participants`
-      );
-      setParticipants(response.data.participants);
-      console.log(response.data.participants);
-    } catch (error) {
-      console.error("Error fetching participants:", error);
-      toast.error("Failed to fetch participants. Please try again.");
-      setParticipants([]);
-    } finally {
-      setLoadingParticipants(false);
-    }
+  const handleViewParticipants = eventId => {
+    navigate(`/registeredUsers/${eventId}`);
   };
-
-  const closePopup = () => {
-    setShowPopup(false);
-    setSelectedEventId(null);
-    setParticipants([]);
-    setParticipantPage(1);
-    setParticipantSearchTerm("");
-  };
-
-  const filteredParticipants = participants.filter(participant =>
-    participant.participantFields.some(field =>
-      field.fieldValue
-        .toLowerCase()
-        .includes(participantSearchTerm.toLowerCase())
-    )
-  );
-
-  const indexOfLastParticipant = participantPage * participantsPerPage;
-  const indexOfFirstParticipant = indexOfLastParticipant - participantsPerPage;
-  const currentParticipants = filteredParticipants.slice(
-    indexOfFirstParticipant,
-    indexOfLastParticipant
-  );
-  const totalParticipantPages = Math.ceil(
-    filteredParticipants.length / participantsPerPage
-  );
-
-  const paginateParticipants = pageNumber => setParticipantPage(pageNumber);
 
   const copyToClipboard = url => {
     navigator.clipboard
@@ -152,70 +139,6 @@ export default function EventAdminUser() {
     navigate(`/EmailDetails/${eventId}`);
   };
 
-  const handleDownloadPDF = async participantId => {
-    try {
-      const response = await axios.get(
-        `http://localhost:5001/api/v1/prescription/downlod/${participantId}`,
-        {
-          responseType: "blob",
-        }
-      );
-
-      const file = new Blob([response.data], { type: "application/pdf" });
-      const fileURL = URL.createObjectURL(file);
-      const link = document.createElement("a");
-      link.href = fileURL;
-      link.download = `prescription_${participantId}.pdf`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-
-      toast.success("PDF downloaded successfully!");
-    } catch (error) {
-      console.error("Error downloading PDF:", error);
-      toast.error("Failed to download PDF. Please try again.");
-    }
-  };
-
-  const handleEditSubmit = async participantId => {
-    try {
-      const participant = participants.find(p => p._id === participantId);
-      const updatedFields = participant.participantFields.map(field => {
-        if (field.fieldName === "Name" || field.fieldName === "Email") {
-          return {
-            ...field,
-            fieldValue: editingParticipant[field.fieldName],
-          };
-        }
-        return field;
-      });
-
-      const response = await axios.put(
-        `http://localhost:5001/api/v1/register/update/${participantId}`,
-        {
-          participantFields: updatedFields,
-        }
-      );
-
-      if (response.status === 200) {
-        setParticipants(
-          participants.map(p =>
-            p._id === participantId
-              ? { ...p, participantFields: updatedFields }
-              : p
-          )
-        );
-        setEditingParticipant(null);
-        toast.success("Participant updated successfully");
-      } else {
-        throw new Error("Failed to update participant");
-      }
-    } catch (error) {
-      console.error("Error updating participant:", error);
-      toast.error("Failed to update participant. Please try again.");
-    }
-  };
-
   const handleDownloadExcel = async eventId => {
     try {
       const response = await axios.get(
@@ -223,7 +146,6 @@ export default function EventAdminUser() {
       );
       const participants = response.data.participants;
 
-      // Get all unique field names except selectedSlot
       const allFields = new Set();
       participants.forEach(participant => {
         participant.participantFields.forEach(field => {
@@ -232,16 +154,23 @@ export default function EventAdminUser() {
           }
         });
       });
+      allFields.add("Scanner");
+      allFields.add("Optometrist");
 
-      // Create worksheet data
       const wsData = [Array.from(allFields)];
 
       participants.forEach(participant => {
         const row = Array.from(allFields).map(fieldName => {
-          const field = participant.participantFields.find(
-            f => f.fieldName === fieldName
-          );
-          return field ? field.fieldValue : "";
+          if (fieldName === "Scanner") {
+            return participant.qrcodescanned ? "Yes" : "No";
+          } else if (fieldName === "Optometrist") {
+            return participant.qrcodescannedbyop ? "Yes" : "No";
+          } else {
+            const field = participant.participantFields.find(
+              f => f.fieldName === fieldName
+            );
+            return field ? field.fieldValue : "";
+          }
         });
         wsData.push(row);
       });
@@ -257,6 +186,11 @@ export default function EventAdminUser() {
       console.error("Error downloading Excel:", error);
       toast.error("Failed to download Excel file. Please try again.");
     }
+  };
+
+  const handleEventsPerPageChange = e => {
+    setEventsPerPage(Number(e.target.value));
+    setCurrentPage(1);
   };
 
   return (
@@ -287,11 +221,45 @@ export default function EventAdminUser() {
         />
       </div>
 
+      <div className="mb-4">
+        <div className="flex space-x-2">
+          {["ongoing", "completed", "unapproved", "upcoming"].map(tab => (
+            <button
+              key={tab}
+              onClick={() => {
+                setActiveTab(tab);
+                setCurrentPage(1);
+              }}
+              className={`px-4 py-2 rounded-t-lg ${
+                activeTab === tab
+                  ? "bg-purple-500 text-white"
+                  : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+              } relative`}
+            >
+              {tab.charAt(0).toUpperCase() + tab.slice(1)}
+              {(tab === "ongoing" || tab === "upcoming") &&
+                categorizedEvents[tab]?.length > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center">
+                    {categorizedEvents[tab].length}
+                  </span>
+                )}
+            </button>
+          ))}
+        </div>
+      </div>
+
       {loading ? (
-        <div className="text-center py-8 text-gray-600">Loading...</div>
-      ) : filteredEvents.length === 0 ? (
-        <div className="text-center py-8 text-gray-600">
-          <p>No events found. Try adjusting your search or add a new event.</p>
+        <div className="text-center py-8">
+          <ClipLoader color="#8B5CF6" size={50} />
+          <p className="text-gray-600 mt-4">Loading events...</p>
+        </div>
+      ) : currentEvents.length === 0 ? (
+        <div className="text-center py-8">
+          <AlertCircle className="h-12 w-12 text-gray-400 mx-auto" />
+          <p className="text-gray-600 mt-4">
+            No {activeTab} events found. Try adjusting your search or add a new
+            event.
+          </p>
         </div>
       ) : (
         <div className="overflow-x-auto bg-white rounded-lg shadow">
@@ -331,9 +299,13 @@ export default function EventAdminUser() {
               {currentEvents.map((event, index) => (
                 <tr key={index} className="hover:bg-gray-50">
                   <td className="p-2 whitespace-nowrap">{event.eventName}</td>
-                  <td className="p-2 whitespace-nowrap">{event.eventDate}</td>
+                  <td className="p-2 whitespace-nowrap">
+                    {formatDate(event.eventDate)}
+                  </td>
                   <td className="p-2 whitespace-nowrap">{event.startTime}</td>
-                  <td className="p-2 whitespace-nowrap">{event.endDate}</td>
+                  <td className="p-2 whitespace-nowrap">
+                    {formatDate(event.endDate)}
+                  </td>
                   <td className="p-2 whitespace-nowrap">{event.endTime}</td>
                   <td className="p-2 whitespace-nowrap">
                     {event.PlaceofEvent}
@@ -377,18 +349,32 @@ export default function EventAdminUser() {
                     </button>
                   </td>
                   <td className="p-2 whitespace-nowrap">
-                    <button
-                      onClick={() => handleViewParticipants(event._id)}
-                      className="bg-purple-500 text-white px-3 py-1 rounded hover:bg-purple-600 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-opacity-50 mr-2"
-                    >
-                      View Registered Clients
-                    </button>
-                    <button
-                      onClick={() => handleDownloadExcel(event._id)}
-                      className="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-opacity-50"
-                    >
-                      Download Excel
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => navigate(`/Events/Edit/${event._id}`)}
+                        className="text-blue-600 hover:text-blue-900 focus:outline-none"
+                        aria-label="Edit Event"
+                        title="Edit Event"
+                      >
+                        <Edit className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleViewParticipants(event._id)}
+                        className="text-purple-600 hover:text-purple-900 focus:outline-none"
+                        aria-label="View Registered Clients"
+                        title="View Registered Clients"
+                      >
+                        <Eye className="h-5 w-5" />
+                      </button>
+                      <button
+                        onClick={() => handleDownloadExcel(event._id)}
+                        className="text-green-600 hover:text-green-900 focus:outline-none"
+                        aria-label="Download Excel"
+                        title="Download Excel"
+                      >
+                        <FileSpreadsheet className="h-5 w-5" />
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -405,9 +391,21 @@ export default function EventAdminUser() {
         >
           Previous
         </button>
-        <span className="text-gray-600">
-          Page {currentPage} of {totalPages}
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className="text-gray-600">
+            Page {currentPage} of {totalPages}
+          </span>
+          <select
+            value={eventsPerPage}
+            onChange={handleEventsPerPageChange}
+            className="border border-gray-300 rounded-md p-1 focus:outline-none focus:ring-2 focus:ring-purple-500"
+          >
+            <option value="5">5</option>
+            <option value="10">10</option>
+            <option value="20">20</option>
+            <option value="50">50</option>
+          </select>
+        </div>
         <button
           onClick={() => paginate(currentPage + 1)}
           disabled={currentPage === totalPages}
@@ -416,220 +414,6 @@ export default function EventAdminUser() {
           Next
         </button>
       </div>
-
-      {showPopup && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center p-4 z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-7xl max-h-[90vh] overflow-auto">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-bold text-gray-800">
-                Registered Clients
-              </h2>
-              <button
-                onClick={closePopup}
-                className="text-gray-500 hover:text-gray-700 focus:outline-none"
-                aria-label="Close"
-              >
-                <svg
-                  className="h-6 w-6"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M6 18L18 6M6 6l12 12"
-                  />
-                </svg>
-              </button>
-            </div>
-            <input
-              type="text"
-              placeholder="Search participants..."
-              value={participantSearchTerm}
-              onChange={e => setParticipantSearchTerm(e.target.value)}
-              className="w-full p-2 mb-4 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
-            />
-            {loadingParticipants ? (
-              <div className="text-center py-8 text-gray-600">
-                Loading participants...
-              </div>
-            ) : participants.length === 0 ? (
-              <div className="text-center py-8 text-gray-600">
-                No participants found.
-              </div>
-            ) : (
-              <>
-                <div className="overflow-x-auto">
-                  <table className="w-full border-collapse">
-                    <thead>
-                      <tr className="bg-gray-100">
-                        <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                          Name
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                          Email
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                          Phone
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                          Time Slot
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                          Scanner
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                          Optometrist
-                        </th>
-                        <th className="p-2 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider whitespace-nowrap">
-                          Action
-                        </th>
-                      </tr>
-                    </thead>
-                    <tbody className="bg-white divide-y divide-gray-200">
-                      {currentParticipants.map((participant, index) => (
-                        <tr key={index} className="hover:bg-gray-50">
-                          <td className="p-2 whitespace-nowrap">
-                            {editingParticipant &&
-                            editingParticipant._id === participant._id ? (
-                              <input
-                                type="text"
-                                value={editingParticipant.Name}
-                                onChange={e =>
-                                  setEditingParticipant({
-                                    ...editingParticipant,
-                                    Name: e.target.value,
-                                  })
-                                }
-                                className="w-full p-1 border border-gray-300 rounded"
-                              />
-                            ) : (
-                              participant.participantFields.find(
-                                field => field.fieldName === "Name"
-                              )?.fieldValue
-                            )}
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            {editingParticipant &&
-                            editingParticipant._id === participant._id ? (
-                              <input
-                                type="email"
-                                value={editingParticipant.Email}
-                                onChange={e =>
-                                  setEditingParticipant({
-                                    ...editingParticipant,
-                                    Email: e.target.value,
-                                  })
-                                }
-                                className="w-full p-1 border border-gray-300 rounded"
-                              />
-                            ) : (
-                              participant.participantFields.find(
-                                field => field.fieldName === "Email"
-                              )?.fieldValue
-                            )}
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            {
-                              participant.participantFields.find(
-                                field =>
-                                  field.fieldName === "Phone Number" ||
-                                  field.fieldName === "MobileNumber"
-                              )?.fieldValue
-                            }
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            {formatTimeSlot(
-                              participant.participantFields.find(
-                                field => field.fieldName === "timeslot"
-                              )?.fieldValue
-                            )}
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            {participant.qrcodescanned ? "Yes" : "No"}
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            {participant.qrcodescannedbyop ? "Yes" : "No"}
-                          </td>
-                          <td className="p-2 whitespace-nowrap">
-                            {editingParticipant &&
-                            editingParticipant._id === participant._id ? (
-                              <>
-                                <button
-                                  onClick={() =>
-                                    handleEditSubmit(participant._id)
-                                  }
-                                  className="bg-green-500 text-white px-2 py-1 rounded mr-2 hover:bg-green-600 transition-colors duration-300"
-                                >
-                                  Save
-                                </button>
-                                <button
-                                  onClick={() => setEditingParticipant(null)}
-                                  className="bg-red-500 text-white px-2 py-1 rounded hover:bg-red-600 transition-colors duration-300"
-                                >
-                                  Cancel
-                                </button>
-                              </>
-                            ) : (
-                              <button
-                                onClick={() =>
-                                  setEditingParticipant({
-                                    _id: participant._id,
-                                    Name: participant.participantFields.find(
-                                      field => field.fieldName === "Name"
-                                    )?.fieldValue,
-                                    Email: participant.participantFields.find(
-                                      field => field.fieldName === "Email"
-                                    )?.fieldValue,
-                                  })
-                                }
-                                className="bg-blue-500 text-white px-2 py-1 rounded hover:bg-blue-600 transition-colors duration-300"
-                              >
-                                Edit
-                              </button>
-                            )}
-                            {participant.qrcodescannedbyop && (
-                              <button
-                                onClick={() =>
-                                  handleDownloadPDF(participant._id)
-                                }
-                                className="bg-purple-500 text-white px-2 py-1 rounded ml-2 hover:bg-purple-600 transition-colors duration-300"
-                              >
-                                Download PDF
-                              </button>
-                            )}
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-                <div className="flex justify-between items-center mt-4">
-                  <button
-                    onClick={() => paginateParticipants(participantPage - 1)}
-                    disabled={participantPage === 1}
-                    className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
-                  >
-                    Previous
-                  </button>
-                  <span className="text-gray-600">
-                    Page {participantPage} of {totalParticipantPages}
-                  </span>
-                  <button
-                    onClick={() => paginateParticipants(participantPage + 1)}
-                    disabled={participantPage === totalParticipantPages}
-                    className="bg-gray-200 text-gray-800 px-4 py-2 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-300 transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-opacity-50"
-                  >
-                    Next
-                  </button>
-                </div>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

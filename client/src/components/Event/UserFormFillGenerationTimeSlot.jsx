@@ -81,6 +81,8 @@ export default function UserFormFillGenerationTimeSlot() {
         case "Phone Number":
           if (!/^\d{10}$/.test(value)) {
             error = "Phone number must be 10 digits";
+          } else if (value[0] === "0") {
+            error = "First digit cannot be 0";
           }
           break;
         default:
@@ -182,7 +184,7 @@ export default function UserFormFillGenerationTimeSlot() {
           currency: "INR",
           name: "Event Registration",
           description: "Complete your registration",
-          handler: async function (response) {
+          handler: async response => {
             setShowSuccessPopup(true);
             setTimeout(() => {
               setShowSuccessPopup(false);
@@ -199,7 +201,7 @@ export default function UserFormFillGenerationTimeSlot() {
             color: "#3399cc",
           },
           modal: {
-            ondismiss: async function () {
+            ondismiss: async () => {
               await axios.delete(
                 `http://localhost:5001/api/v1/register/delete/${registrationId}`
               );
@@ -243,11 +245,18 @@ export default function UserFormFillGenerationTimeSlot() {
   const handlePhoneInput = useCallback(
     e => {
       const value = e.target.value.replace(/\D/g, "").slice(0, 10);
-      setFormData(prev => ({
-        ...prev,
-        [e.target.name]: value,
-      }));
-      validateField(e.target.name, value);
+      if (value.length > 0 && value[0] === "0") {
+        setFormErrors(prev => ({
+          ...prev,
+          "Phone Number": "First digit cannot be 0",
+        }));
+      } else {
+        setFormData(prev => ({
+          ...prev,
+          [e.target.name]: value,
+        }));
+        validateField(e.target.name, value);
+      }
     },
     [validateField]
   );
@@ -277,7 +286,7 @@ export default function UserFormFillGenerationTimeSlot() {
           {eventData.images.map((img, index) => (
             <div key={index} className="w-full h-full flex-shrink-0 relative">
               <img
-                src={img}
+                src={img || "/placeholder.svg"}
                 alt={`Event image ${index + 1}`}
                 className="absolute top-0 left-0 w-full h-full object-contain"
               />
@@ -374,6 +383,9 @@ export default function UserFormFillGenerationTimeSlot() {
               pattern={field.name === "Phone Number" ? "[0-9]*" : undefined}
               inputMode={field.name === "Phone Number" ? "numeric" : undefined}
             />
+            <span className="ml-2 text-sm text-gray-300">
+              please add whatsapp number
+            </span>
             {formErrors[field.name] && (
               <p className="mt-1 text-red-500 text-sm">
                 {formErrors[field.name]}

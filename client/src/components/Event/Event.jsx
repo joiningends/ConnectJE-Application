@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { format } from "date-fns";
-import { AiOutlineCalendar, AiOutlineClockCircle } from "react-icons/ai";
+// import { AiOutlineCalendar, AiOutlineClockCircle } from "react-icons/ai";
 import axios from "../../axiosSetup";
 import { BsCalendar } from "react-icons/bs";
 const EventCreationAdmin = () => {
